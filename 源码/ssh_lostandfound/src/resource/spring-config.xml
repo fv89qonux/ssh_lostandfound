@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd
+		http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.0.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd">
+
+	<!-- 扫描注解Bean 4個註解 -->
+	<context:component-scan
+		base-package="com.lin.**.impl,com.lin.*.websocket,com.lin.*.aspect">
+		<context:exclude-filter type="annotation"
+			expression="org.springframework.stereotype.Controller" />
+	</context:component-scan>
+	<!-- 导入资源文件 -->
+	<context:property-placeholder
+		location="classpath:resource/database.properties" />
+
+
+
+	<bean id="dataSource1"
+		class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+		<property name="driverClassName" value="${driver}" />
+		<property name="url" value="${url}" />
+		<property name="username" value="${user}" />
+		<property name="password" value="${password}" />
+		<property name="poolPreparedStatements" value="true" />
+		<!-- 是否对sql进行自动提交 -->
+		<property name="defaultAutoCommit" value="true" />
+	</bean>
+
+	<bean id="dataSource2"
+		class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+		<property name="driverClassName" value="${driver}" />
+		<property name="url" value="${url}" />
+		<property name="username" value="${user}" />
+		<property name="password" value="${password}" />
+		<property name="poolPreparedStatements" value="true" />
+		<!-- 是否对sql进行自动提交 -->
+		<property name="defaultAutoCommit" value="true" />
+	</bean>
+
+	<bean id="dataSource"
+		class="com.lin.lostandfound.datasource.DynamicDataSource">
+		<property name="targetDataSources">
+			<map key-type="java.lang.String">
+				<entry value-ref="dataSource1" key="dataSource1"></entry>
+			</map>
+		</property>
+		<property name="defaultTargetDataSource" ref="dataSource1"></property>
+	</bean>
+
+	<bean id="dataSourceExchange"
+		class="com.lin.lostandfound.aspect.DataSourceAspect"></bean>
+
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="packagesToScan"
+			value="classpath:com.**.domain" />
+		<property name="mappingLocations"
+			value="classpath:com/lin/lostandfound/domain/*.hbm.xml"></property>
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+				<prop key="hibernate.show_sql">true</prop>
+				<prop key="hibernate.format_sql">true</prop>
+				<prop key="hibernate.hbm2ddl.auto">update</prop>
+				<prop key="hibernate.current_session_context_class">org.springframework.orm.hibernate4.SpringSessionContext
+				</prop>
+			</props>
+		</property>
+	</bean>
+
+	<!-- 事务管理 -->
+	<bean id="transactionManager"
+		class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+		<property name="sessionFactory" ref="sessionFactory"></property>
+	</bean>
+
+	<!-- 事务注解 -->
+	<tx:annotation-driven
+		transaction-manager="transactionManager" />
+
+	<!-- Spring声明式事务 -->
+	<tx:advice transaction-manager="transactionManager"
+		id="txAdvice">
+		<tx:attributes>
+			<tx:method name="get*" read-only="true" />
+			<tx:method name="find*" read-only="true" />
+			<tx:method name="count*" read-only="true" />
+			<tx:method name="*" />
+		</tx:attributes>
+	</tx:advice>
+
+	<aop:config>
+		<aop:pointcut id="transactionPointCut"
+			expression="execution(* com.lin.lostandfound.service.impl.*.*(..))" />
+		<aop:advisor pointcut-ref="transactionPointCut"
+			advice-ref="txAdvice" order="2" />
+		<!-- <aop:advisor advice-ref="dataSourceExchange" pointcut-ref="transactionPointCut" 
+			order="1"/> -->
+	</aop:config>
+
+	<!-- <aop:config> <aop:pointcut expression="execution(* xx.xx.service.impl.*.*(..))" 
+		id="txPointCut"/> <aop:advisor advice-ref="txAdvice" pointcut-ref="txPointCut"/> 
+		</aop:config> -->
+
+</beans>

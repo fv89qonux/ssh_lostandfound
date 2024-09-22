@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd
+		http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.0.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd">
+
+	<!-- 开启Controller注解支持 -->
+	<context:component-scan base-package="com.lin.**.controller">
+		<context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+	</context:component-scan>
+
+	<mvc:annotation-driven />
+
+	<mvc:default-servlet-handler />
+	
+	<!-- 静态资源映射配置 -->
+	<mvc:resources location="/WEB-INF/static/" mapping="/static/**" />
+
+	<!-- 配置视图解析器: 如何把 handler方法返回值解析为实际的物理视图 -->
+	<bean id="defaultViewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="viewClass" value="org.springframework.web.servlet.view.JstlView" />
+		<property name="contentType" value="text/html"/>
+		<property name="prefix" value="/WEB-INF/views/"></property>
+		<property name="suffix" value=".jsp"></property>
+	</bean>
+	
+	<!-- 文件上传 -->
+	<bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+		 <!-- 默认编码 -->
+   		<property name="defaultEncoding" value="UTF-8" />
+	</bean>
+
+	<!-- 拦截器配置 -->
+	<mvc:interceptors>
+		<!-- 当设置多个拦截器时，先按顺序调用preHandle方法，然后逆序调用每个拦截器的postHandle和afterCompletion方法 -->
+		<!-- 前台拦截器 -->
+		<mvc:interceptor>
+			<!-- 匹配的是url路径， 如果不配置或/**,将拦截所有的Controller -->			
+			<mvc:mapping path="/find/**" />
+			<mvc:mapping path="/lost/**" />
+			<mvc:mapping path="/user/**" />
+			<mvc:mapping path="/message/**" />
+			<mvc:exclude-mapping path="/find/find-list.do/**" />
+			<mvc:exclude-mapping path="/find/find-list.html/**" />
+			<mvc:exclude-mapping path="/find/find-details.do/**" />
+			<mvc:exclude-mapping path="/find/find-details.html/**" />	
+						
+			<mvc:exclude-mapping path="/lost/lost-list.do/**" />
+			<mvc:exclude-mapping path="/lost/lost-list.html/**" />
+			<mvc:exclude-mapping path="/lost/lost-details.do/**" />
+			<mvc:exclude-mapping path="/lost/lost-details.html/**" />
+			<mvc:exclude-mapping path="/static/**" />
+			<bean class="com.lin.lostandfound.interceptor.UserInterceptor" />
+		</mvc:interceptor>
+		<!-- 配置Token拦截器，防止用户重复提交数据 -->
+        <mvc:interceptor>
+            <mvc:mapping path="/find/**" />
+			<mvc:mapping path="/lost/**" />
+            <bean class="com.lin.lostandfound.interceptor.TokenInterceptor"/>
+        </mvc:interceptor>
+		<!-- 后台拦截器 -->
+		<mvc:interceptor>
+			<!-- 匹配的是url路径， 如果不配置或/**,将拦截所有的Controller -->
+			<mvc:mapping path="/admin/**" />
+			<mvc:exclude-mapping path="/admin/login"/>
+			<mvc:exclude-mapping path="/admin/login.do"/>
+			<mvc:exclude-mapping path="/admin/login.html"/>
+			<bean class="com.lin.lostandfound.interceptor.AdminInterceptor"/>
+		</mvc:interceptor>
+		
+	</mvc:interceptors>
+	
+	<!-- 在调用Controller的时候AOP发挥作用所以在此配置文件里加上以下配置信息 -->	
+	<!-- 启动对@AspectJ注解的支持 -->
+	<aop:aspectj-autoproxy/>
+	
+	<!--通知spring使用cglib而不是jdk的来生成代理方法 AOP可以拦截到Controller-->  
+	<aop:aspectj-autoproxy proxy-target-class="true"/>  
+
+</beans>
